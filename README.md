@@ -34,7 +34,7 @@ For better result, all the images demonstrate below are using SSAA 2x
 
 #### Tile-Based Pipeline
 
-+[tile_imp](img/tile_imp.png)
+![tile_imp](img/tile_imp.png)
 (Image from *OpenGLInsights, TileBasedArchitectures*)
 
 Break framebuffer into several tiles, and render one tile per thread instead of one primitive per thread.
@@ -83,7 +83,7 @@ For details performance comparison, please check *Performance* Section.
 Given any pixel in the scene, it is possible to calculate its ambient occlusion by treating all neighboring pixels as small spheres, and adding together their contributions. 
 The occlusion can be contributed by distance to occludee and angle between occludee's normal and occluder.
 
-+[ao](img/ao.jpg)
+![ao](img/ao.jpg)
 (Image from *A Simple and Practical Approach to SSAO* https://www.gamedev.net/articles/programming/graphics/a-simple-and-practical-approach-to-ssao-r2753/)
 
 Because we need a random direction of occlusion ray. A cached or per-generated noise texture is necessary. If the SSAO feature is turn on a 16x16 noise texture will be generate rasterizer after the primitive has loaded.
