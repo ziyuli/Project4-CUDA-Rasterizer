@@ -120,7 +120,7 @@ void runCuda() {
 	glm::mat4 MVP = P * MV;
 
     cudaGLMapBufferObject((void **)&dptr, pbo);
-	rasterize(dptr, MVP, MV, MV_normal);
+	rasterize(dptr, MVP, MV, MV_normal, frame);
     cudaGLUnmapBufferObject(pbo);
 
     frame++;
@@ -138,8 +138,8 @@ bool init(const tinygltf::Scene & scene) {
         return false;
     }
 
-    width = 800;
-    height = 800;
+    width = 512;
+    height = 512;
     window = glfwCreateWindow(width, height, "CIS 565 Pathtracer", NULL, NULL);
     if (!window) {
         glfwTerminate();

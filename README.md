@@ -1,18 +1,102 @@
-CUDA Rasterizer
-===============
+University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 4 CUDA Rasterizer
+======================
+* Ziyu Li
+* Tested on: Windows 7, Intel Core i7-3840QM @2.80GHz 16GB, Nvidia Quadro K4000M 4GB
 
-[CLICK ME FOR INSTRUCTION OF THIS PROJECT](./INSTRUCTION.md)
+## Features
+#### All Features
+ - All Basic Graphics Pipeline
+	 - Vertex Shading
+	 - Primitive assembly with support for triangles read from buffers of index and vertex data.
+	 - Rasterization
+	 - Fragment shading
+	 - Depth Buffer and Depth Test
+	 - Lambert and Blinn shading Model
+ - Other Features
+	 - High Precision Float z buffer
+	 - Screen Space Ambient Occlusion (SSAO)
+	 - Super-Sampling Anti Aliasing (SSAA)
+	 - Tile-Based Pipeline
+	 - Back-face Culling
+	 - Display Wire-frame / Points with line width and point size adjustment
+	 - UV Texture Mapping with Perspective Correction
+	 - Bilinear Texture Filter
+	 - Toon Shading
+	 - Bloom (Still has some bugs...)
 
-**University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 4**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+For better result, all the images demonstrate below are using SSAA 2x
 
-### (TODO: Your README)
+#### Shading Models
+| Lambert | Blinn |
+| ----- | ----- |
+| ![lambert](img/duck_lambert.gif) | ![blinn](img/duck_blinn.gif) |
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+#### Tile-Based Pipeline
+| Primitive-Based | Tile-Based |
+| ----- | ----- |
+| ![prim](img/truck_prim_base.gif) | ![tile](img/truck_tile_base_backface.gif) |
 
+For details performance comparison, please check *Performance* Section. 
+
+#### Back-face Culling
+| No Culling | Back-face Culling |
+| ----- | ----- |
+| ![noculling](img/truck_prim_base.gif) | ![culling](img/truck_prim_base_backface.gif) |
+
+For details performance comparison, please check *Performance* Section. 
+
+#### Display Wire-frame / Points
+| Solid | Wire-frame | Points|
+| ----- | ----- | ----- |
+| ![solid](img/duck_no_wire_point.PNG) | ![wire](img/duck_wireframe.PNG) | ![point](img/duck_point.PNG) | 
+
+#### UV Texture Mapping with Perspective Correction
+
+| Wrong | Correct|
+| ----- | ----- |
+| ![texw](img/tex_wrong.PNG) | ![texr](img/tex_right.PNG) |
+
+#### Bilinear Texture Filter
+
+| No Filter | Bilinear Filter |
+| ----- | ----- |
+| ![nof](img/truck_no_bilinear.PNG) | ![f](img/truck_bilinear.PNG) |
+
+#### Screen Space Ambient Occlusion (SSAO)
+
+
+| No AO | SSAO | SSAO Pass |
+| ----- | ----- | ----- |
+| ![no ao](img/truck_lambert_noao.PNG) | ![ssao](img/truck_lambert_ao.PNG) | ![ssaopass](img/truck_ao_pass.PNG) |
+
+
+**Noise Texture Generation**
+![noise](img/noise.PNG)
+
+**SSAO Pass Render**
+![aoaa](img/truck_ao_pass_ani.gif)
+
+#### Super-Sampling Anti Aliasing (SSAA)
+
+| No AA | SSAA x2 | SSAA x4|
+| ----- | ----- | ----- |
+| ![no aa](img/duck_no_aa.PNG) | ![ssaa2](img/duck_aa.PNG) | ![ssaa4](img/duck_aa4.PNG) | 
+
+
+#### Toon Shading
+| Orignal | Toon Shading |
+| ----- | ----- |
+| ![lambert](img/duck_lambert.gif) | ![toon](img/duck_lambert_toon.gif) |
+
+
+#### Bloom (BUGGE......)
+| Orignal | Bloom |
+| ----- | ----- |
+| ![lambert](img/img/duck_lambert.gif) | ![bloom](img/duck_blinn_bloom.gif) |
+
+
+##Performance
 
 ### Credits
 

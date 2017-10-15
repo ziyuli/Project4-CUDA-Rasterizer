@@ -88,6 +88,23 @@ bool isBarycentricCoordInBounds(const glm::vec3 barycentricCoord) {
            barycentricCoord.z >= 0.0 && barycentricCoord.z <= 1.0;
 }
 
+__host__ __device__ static
+bool isBarycentricCoordOnBounds(const glm::vec3 barycentricCoord) {
+	if (glm::abs(1 - glm::abs(barycentricCoord.x + barycentricCoord.y)) <= 0.07f && glm::abs(barycentricCoord.z) <= 0.07f) return true;
+	if (glm::abs(1 - glm::abs(barycentricCoord.y + barycentricCoord.z)) <= 0.07f && glm::abs(barycentricCoord.x) <= 0.07f) return true;
+	if (glm::abs(1 - glm::abs(barycentricCoord.z + barycentricCoord.x)) <= 0.07f && glm::abs(barycentricCoord.y) <= 0.07f) return true;
+	return false;
+}
+
+__host__ __device__ static
+bool isBarycentricCoordOnCorner(const glm::vec3 barycentricCoord) {
+	if (glm::abs(1 - glm::abs(barycentricCoord.x)) < 0.11f && glm::abs(barycentricCoord.y) < 0.11 && glm::abs(barycentricCoord.z) < 0.11) return true;
+	if (glm::abs(1 - glm::abs(barycentricCoord.y)) < 0.11f && glm::abs(barycentricCoord.x) < 0.11 && glm::abs(barycentricCoord.z) < 0.11) return true;
+	if (glm::abs(1 - glm::abs(barycentricCoord.z)) < 0.11f && glm::abs(barycentricCoord.y) < 0.11 && glm::abs(barycentricCoord.x) < 0.11) return true;
+	return false;
+}
+
+
 // CHECKITOUT
 /**
  * For a given barycentric coordinate, compute the corresponding z position
