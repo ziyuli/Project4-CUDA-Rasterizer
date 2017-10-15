@@ -33,13 +33,24 @@ For better result, all the images demonstrate below are using SSAA 2x
 | ![lambert](img/duck_lambert.gif) | ![blinn](img/duck_blinn.gif) |
 
 #### Tile-Based Pipeline
+
++[tile_imp](img/tile_imp.png)
+(Image from *OpenGLInsights, TileBasedArchitectures*)
+
+Break framebuffer into several tiles, and render one tile per thread instead of one primitive per thread.
+
 | Primitive-Based | Tile-Based |
 | ----- | ----- |
 | ![prim](img/truck_prim_base.gif) | ![tile](img/truck_tile_base_backface.gif) |
 
+By using the Tile-Based Pipeline, the interaction is much smoother and GPU Load is siginificant reduced. 
+
 For details performance comparison, please check *Performance* Section. 
 
 #### Back-face Culling
+
+The rasterizer will neglect such triangles which are not facing to the camera (eye).
+
 | No Culling | Back-face Culling |
 | ----- | ----- |
 | ![noculling](img/truck_prim_base.gif) | ![culling](img/truck_prim_base_backface.gif) |
@@ -65,14 +76,19 @@ For details performance comparison, please check *Performance* Section.
 
 #### Screen Space Ambient Occlusion (SSAO)
 
-
 | No AO | SSAO | SSAO Pass |
 | ----- | ----- | ----- |
 | ![no ao](img/truck_lambert_noao.PNG) | ![ssao](img/truck_lambert_ao.PNG) | ![ssaopass](img/truck_ao_pass.PNG) |
 
+Given any pixel in the scene, it is possible to calculate its ambient occlusion by treating all neighboring pixels as small spheres, and adding together their contributions. 
+The occlusion can be contributed by distance to occludee and angle between occludee's normal and occluder.
 
-**Noise Texture Generation**
-![noise](img/noise.PNG)
++[ao](img/ao.jpg)
+(Image from *A Simple and Practical Approach to SSAO* https://www.gamedev.net/articles/programming/graphics/a-simple-and-practical-approach-to-ssao-r2753/)
+
+Because we need a random direction of occlusion ray. A cached or per-generated noise texture is necessary. If the SSAO feature is turn on a 16x16 noise texture will be generate rasterizer after the primitive has loaded.
+
+This screenshot below, shows the AO Pass of the model.
 
 **SSAO Pass Render**
 ![aoaa](img/truck_ao_pass_ani.gif)
@@ -91,14 +107,27 @@ For details performance comparison, please check *Performance* Section.
 
 
 #### Bloom (BUGGE......)
+
+There are still something not corrected yet. But the basic idea is to blend the framebuffer with different amount of blur.
+
 | Orignal | Bloom |
 | ----- | ----- |
-| ![lambert](img/img/duck_lambert.gif) | ![bloom](img/duck_blinn_bloom.gif) |
-
+| ![lambert](img/duck_lambert.gif) | ![bloom](img/duck_blinn_bloom.gif) |
 
 ##Performance
+#### Tile-Based Pipeline
+
+
+
+
+
+### References
+* [Blinn Shading](https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model)
+* [SSAO](https://www.gamedev.net/articles/programming/graphics/a-simple-and-practical-approach-to-ssao-r2753/)
+* [Back-Face Culling](https://en.wikipedia.org/wiki/Back-face_culling)
+* [Kernel Filter](https://www.slideshare.net/DarshanParsana/gaussian-image-blurring-in-cuda-c)
 
 ### Credits
-
+* [factomicMin](https://devtalk.nvidia.com/default/topic/492068/atomicmin-with-float/) by [@hyqneuron]()
 * [tinygltfloader](https://github.com/syoyo/tinygltfloader) by [@soyoyo](https://github.com/syoyo)
 * [glTF Sample Models](https://github.com/KhronosGroup/glTF/blob/master/sampleModels/README.md)
