@@ -14,6 +14,8 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <thrust/random.h>
+#include <thrust/execution_policy.h>
+#include <thrust/remove.h>
 #include <util/checkCUDAError.h>
 #include <util/tiny_gltf_loader.h>
 #include "rasterizeTools.h"
@@ -23,13 +25,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #define BILINEAR_INTERP 0
-#define BLINN 1
+#define BLINN 0
 #define SSAO 0
-#define SSAA 2 
+#define SSAA 0
 #define TOON 0
 #define BLOOM 0
 #define TILE_BASED_RENDER 1
-#define BACKFACE_CULLING 1
+#define BACKFACE_CULLING 0
 #define SHADING 0 // 0: Solid, 1: Wireframe, 2: Point
 #define DEMO 0
 
@@ -194,13 +196,14 @@ int clamp(int v, int a, int b)
 	return MIN(MAX(a, v), b);
 }
 
+
 __host__ __device__
 glm::vec3 getTexColor(TextureData* tex, int stride, int u, int v)
 {
 	int idx = (u + v * stride) * 3;
 	return glm::vec3(COL(tex[idx + 0]),
-		COL(tex[idx + 1]),
-		COL(tex[idx + 2]));
+					 COL(tex[idx + 1]),
+					 COL(tex[idx + 2]));
 }
 
 template<class T>
@@ -319,6 +322,7 @@ void render(int w, int h, Fragment *fragmentBuffer, glm::vec3 *framebuffer, glm:
 
 // Toon Shader
 #if TOON
+
 		ambient = 0.1f;
 		specular = specular > 0.75f ? 1.0f : 0.0f;
 		if (diffuse < 0.1f) diffuse = 0.0f;
@@ -980,8 +984,18 @@ void _primitiveAssembly(int numIndices, int curPrimitiveBeginId, Primitive* dev_
 // BackFace Culling
 // https://en.wikipedia.org/wiki/Back-face_culling
 
+struct backface {
+	__host__ __device__
+		bool operator()(const Primitive &prim)
+	{
+		glm::vec4 tri[3] = { prim.v[0].pos, prim.v[1].pos, prim.v[2].pos };
+		float z = (tri[1].x - tri[0].x) * (tri[2].y - tri[0].y) - (tri[1].y - tri[0].y) * (tri[2].x - tri[0].x);
+		return z < 0.0f;
+	}
+};
+
 __host__ __device__
-bool front(glm::vec3 tri[3], int mode = 1)
+bool front(glm::vec3 *tri, int mode = 1)
 {
 	float z = (tri[1].x - tri[0].x) * (tri[2].y - tri[0].y) - (tri[1].y - tri[0].y) * (tri[2].x - tri[0].x);
 	return mode ? z > 0.0f : z < 0.0f;
@@ -993,20 +1007,9 @@ float sum(glm::vec3 v)
 	return v.x + v.y + v.z;
 }
 
+template<class T>
 __host__ __device__
-glm::vec3 eval(glm::vec3 barycentric, glm::vec3 *val)
-{
-	return barycentric.x * val[0] + barycentric.y * val[1] + barycentric.z * val[2];
-}
-
-__host__ __device__
-glm::vec2 eval(glm::vec3 barycentric, glm::vec2 *val)
-{
-	return barycentric.x * val[0] + barycentric.y * val[1] + barycentric.z * val[2];
-}
-
-__host__ __device__
-float eval(glm::vec3 barycentric, float *val)
+T eval(glm::vec3 barycentric, T *val)
 {
 	return barycentric.x * val[0] + barycentric.y * val[1] + barycentric.z * val[2];
 }
@@ -1050,10 +1053,6 @@ void _rasterization(Fragment * dev_fragmentBuffer, Primitive * dev_primitives, i
 		glm::vec3 col[3] = {p.v[0].col , p.v[1].col , p.v[2].col};
 		glm::vec3 eyenor[3] = { p.v[0].eyeNor, p.v[1].eyeNor, p.v[2].eyeNor };
 		glm::vec3 eyepos[3] = { p.v[0].eyePos, p.v[1].eyePos, p.v[2].eyePos };
-		
-#if BACKFACE_CULLING
-		if (!front(tri)) return;
-#endif
 
 		AABB bbox = getAABBForTriangle(tri);
 		int maxx = MIN(bbox.max.x, width - 1);
@@ -1072,10 +1071,10 @@ void _rasterization(Fragment * dev_fragmentBuffer, Primitive * dev_primitives, i
 				int index = x + y * width;
 				fatomicMin(&dev_depth[index], depth);
 				if (depth == dev_depth[index]) {
-					dev_fragmentBuffer[index].z = depth;
-					dev_fragmentBuffer[index].color = eval(barycentric, col);
-					dev_fragmentBuffer[index].eyeNor = glm::normalize(eval(barycentric, eyenor));
-					dev_fragmentBuffer[index].eyePos = eval(barycentric, eyepos);
+					dev_fragmentBuffer[index].z = depth; // xxxx
+					dev_fragmentBuffer[index].color = eval<glm::vec3>(barycentric, col);
+					dev_fragmentBuffer[index].eyeNor = glm::normalize(eval<glm::vec3>(barycentric, eyenor));
+					dev_fragmentBuffer[index].eyePos = eval<glm::vec3>(barycentric, eyepos);
 					if (dev_primitives[pid].tex != NULL) {
 						dev_fragmentBuffer[index].dev_diffuseTex = dev_primitives[pid].tex;
 						dev_fragmentBuffer[index].size[0] = dev_primitives[pid].size[0];
@@ -1085,7 +1084,7 @@ void _rasterization(Fragment * dev_fragmentBuffer, Primitive * dev_primitives, i
 						float c[3] = {  eyepos[0].z,  eyepos[1].z, eyepos[2].z };
 						glm::vec2 ttex[3] = { tex[0] / eyepos[0].z, tex[1] / eyepos[1].z, tex[2] / eyepos[2].z };
 						float cz = getCorrectedZ(barycentric, c);
-						dev_fragmentBuffer[index].texcoord0 = cz * eval(barycentric, ttex);
+						dev_fragmentBuffer[index].texcoord0 = cz * eval<glm::vec2>(barycentric, ttex);
 
 					}
 				}
@@ -1117,8 +1116,8 @@ void _rasterization(Fragment * dev_fragmentBuffer, Primitive * dev_primitives, i
 						#if SHADING == 2
 							dev_fragmentBuffer[index].color = glm::vec3(1, 0.1, 0.1);
 						#endif
-						dev_fragmentBuffer[index].eyeNor = glm::normalize(eval(barycentric, eyenor));
-						dev_fragmentBuffer[index].eyePos = eval(barycentric, eyepos);
+						dev_fragmentBuffer[index].eyeNor = glm::normalize(eval<glm::vec3>(barycentric, eyenor));
+						dev_fragmentBuffer[index].eyePos = eval<glm::vec3>(barycentric, eyepos);
 						dev_fragmentBuffer[index].dev_diffuseTex = NULL;
 					}
 
@@ -1141,7 +1140,7 @@ void tileBound(AABB bbox, int *minmax, glm::vec3 *tri, glm::vec2 tilewh, int til
 }
 
 
-// tilesize: 
+
 __global__
 void _decompose(Primitive * dev_primitives, int * count, int nPrimatives, int *tile, glm::vec2 tileWidthHeight, int tilesize)
 {
@@ -1198,9 +1197,9 @@ void _rasterizationWithTiles(Fragment * dev_fragmentBuffer, Primitive * dev_prim
 				fatomicMin(&dev_depth[index], depth);
 				if (depth == dev_depth[index]) {
 					dev_fragmentBuffer[index].z = depth;
-					dev_fragmentBuffer[index].color = eval(barycentric, col);
-					dev_fragmentBuffer[index].eyeNor = glm::normalize(eval(barycentric, eyenor));
-					dev_fragmentBuffer[index].eyePos = eval(barycentric, eyepos);
+					dev_fragmentBuffer[index].color = eval<glm::vec3>(barycentric, col);
+					dev_fragmentBuffer[index].eyeNor = glm::normalize(eval<glm::vec3>(barycentric, eyenor));
+					dev_fragmentBuffer[index].eyePos = eval<glm::vec3>(barycentric, eyepos);
 					if (dev_primitives[pid].tex != NULL) {
 						dev_fragmentBuffer[index].dev_diffuseTex = dev_primitives[pid].tex;
 						dev_fragmentBuffer[index].size[0] = dev_primitives[pid].size[0];
@@ -1210,7 +1209,7 @@ void _rasterizationWithTiles(Fragment * dev_fragmentBuffer, Primitive * dev_prim
 						float c[3] = { eyepos[0].z,  eyepos[1].z, eyepos[2].z };
 						glm::vec2 ttex[3] = { tex[0] / eyepos[0].z, tex[1] / eyepos[1].z, tex[2] / eyepos[2].z };
 						float cz = getCorrectedZ(barycentric, c);
-						dev_fragmentBuffer[index].texcoord0 = cz * eval(barycentric, ttex);
+						dev_fragmentBuffer[index].texcoord0 = cz * eval<glm::vec2>(barycentric, ttex);
 
 					}
 				}
@@ -1322,11 +1321,18 @@ void rasterize(uchar4 *pbo, const glm::mat4 & MVP, const glm::mat4 & MV, const g
 
 #if !TILE_BASED_RENDER
 	
+	int restPrims = totalNumPrimitives;
+	#if BACKFACE_CULLING
+		using namespace thrust;
+		Primitive *_dev_prim = remove_if(device, dev_primitives, dev_primitives + totalNumPrimitives, backface());
+		restPrims = MAX(_dev_prim - dev_primitives, 1);
+	#endif
+
 	const int THREADS = 128;
 	dim3 threadsPerBlock(THREADS);
-	dim3 blocksPerGrid((totalNumPrimitives + THREADS - 1) / THREADS);
+	dim3 blocksPerGrid((restPrims + THREADS - 1) / THREADS);
 	cudaFuncSetCacheConfig(_rasterization, cudaFuncCachePreferL1);
-	_rasterization << <blocksPerGrid, threadsPerBlock >> > (dev_fragmentBuffer, dev_primitives, totalNumPrimitives, dev_depth, width, height);
+	_rasterization << <blocksPerGrid, threadsPerBlock >> > (dev_fragmentBuffer, dev_primitives, restPrims, dev_depth, width, height);
 	checkCUDAError("rasteration");
 	
 #else
@@ -1339,7 +1345,7 @@ void rasterize(uchar4 *pbo, const glm::mat4 & MVP, const glm::mat4 & MV, const g
 	bsize = dim3(numTilesW, numTilesH, 1);
 	tsize = dim3(tilesize, tilesize, 1);
 	cudaFuncSetCacheConfig(_rasterizationWithTiles, cudaFuncCachePreferL1);
-	_rasterizationWithTiles << <bsize, tsize >> >(dev_fragmentBuffer, dev_primitives, totalNumPrimitives, dev_depth, width, height, dev_count, dev_tile, glm::vec2(numTilesW, numTilesH), tilesize);
+	_rasterizationWithTiles << <bsize, tsize>>>(dev_fragmentBuffer, dev_primitives, totalNumPrimitives, dev_depth, width, height, dev_count, dev_tile, glm::vec2(numTilesW, numTilesH), tilesize);
 	checkCUDAError("Rasterization With Tiles");
 #endif
 
