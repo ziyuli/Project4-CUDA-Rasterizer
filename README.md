@@ -135,9 +135,9 @@ To toggle the SSAO, change the *SSAO* to 1
 | ----- | ----- | ----- |
 | ![no aa](img/duck_no_aa.PNG) | ![ssaa2](img/duck_aa.PNG) | ![ssaa4](img/duck_aa4.PNG) | 
 
-To toggle the SSAA, change the *SSAA* to 1
+To toggle the SSAA, change the *SSAA* to 2 for 2x or 4 for 4x...
 ```c++
- #define SSAA 1
+ #define SSAA 2 // A value greater than 1
 ```
 
 #### Toon Shading
